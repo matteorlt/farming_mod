@@ -17,8 +17,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 
 /**
- * Lit {@code Cooldown: 1m 58s} dans le widget Pests du tab, puis déclenche
- * l’alerte quand il reste moins de N secondes.
+ * Lit {@code Cooldown: 2m 50s} dans le widget Pests du tab, puis affiche
+ * un compte à rebours de 5 s.
  */
 public final class PestCooldownTracker {
 	private static final Pattern COOLDOWN = Pattern.compile("(?i)cooldown:\\s*(.+)$");
@@ -29,10 +29,12 @@ public final class PestCooldownTracker {
 	private static final Pattern BARE_NUMBER = Pattern.compile("^\\d{1,3}$");
 
 	private long endsAtMs;
+	private long countdownEndsAtMs;
 	private State state = State.UNKNOWN;
 	private boolean alertArmed = true;
 	private boolean lastParseCoarse;
 	private int lastBeepSecond = -1;
+	private int previousRemaining = -1;
 	private int awayTicks;
 	private boolean seenCooldownLine;
 
@@ -57,35 +59,57 @@ public final class PestCooldownTracker {
 		}
 
 		int remaining = remainingSeconds();
-		int threshold = Math.max(1, config.pestCooldownAlertSeconds);
-		if (state != State.TIMING || lastParseCoarse || remaining <= 0 || remaining > threshold) {
-			if (remaining > threshold || lastParseCoarse || state == State.READY || state == State.MAX) {
-				alertArmed = true;
-				lastBeepSecond = -1;
-			}
-			return;
+		int triggerAt = Math.max(1, config.pestCooldownAlertAtSeconds);
+		int windowLow = Math.max(1, triggerAt - 20);
+		if (state == State.TIMING && !lastParseCoarse && remaining > triggerAt + 5) {
+			alertArmed = true;
+		}
+		if (state == State.READY || state == State.MAX) {
+			alertArmed = true;
+			countdownEndsAtMs = 0;
 		}
 
-		if (alertArmed) {
+		boolean inWindow = remaining > 0 && remaining <= triggerAt && remaining >= windowLow;
+		boolean crossed = previousRemaining > triggerAt && remaining <= triggerAt && remaining >= windowLow;
+		boolean joinedInWindow = previousRemaining < 0 && inWindow;
+		if (alertArmed && state == State.TIMING && !lastParseCoarse && (crossed || joinedInWindow)) {
 			alertArmed = false;
-			lastBeepSecond = remaining;
-			pushTitle(client, remaining);
-			playLoud(client, SoundEvents.PLAYER_LEVELUP, 0.9f, 3.0f);
-			playLoud(client, SoundEvents.NOTE_BLOCK_PLING.value(), 1.4f, 3.0f);
-			playLoud(client, SoundEvents.NOTE_BLOCK_BELL.value(), 1.1f, 2.5f);
-		} else if (remaining != lastBeepSecond) {
-			lastBeepSecond = remaining;
-			pushTitle(client, remaining);
-			playLoud(client, SoundEvents.NOTE_BLOCK_PLING.value(), remaining <= 3 ? 1.8f : 1.35f, 2.8f);
+			int length = Math.max(1, config.pestCooldownAlertCountdown);
+			countdownEndsAtMs = System.currentTimeMillis() + length * 1000L;
+			lastBeepSecond = -1;
+		}
+		previousRemaining = remaining;
+
+		int countdown = alertCountdownSeconds();
+		if (countdown <= 0) {
+			return;
+		}
+		if (lastBeepSecond != countdown) {
+			lastBeepSecond = countdown;
+			pushTitle(client, countdown);
+			if (countdown == Math.max(1, config.pestCooldownAlertCountdown)) {
+				playLoud(client, SoundEvents.PLAYER_LEVELUP, 0.9f, 3.0f);
+				playLoud(client, SoundEvents.NOTE_BLOCK_PLING.value(), 1.4f, 3.0f);
+				playLoud(client, SoundEvents.NOTE_BLOCK_BELL.value(), 1.1f, 2.5f);
+			} else {
+				playLoud(client, SoundEvents.NOTE_BLOCK_PLING.value(), countdown <= 2 ? 1.8f : 1.35f, 2.8f);
+			}
 		}
 	}
 
 	public boolean alerting(ModConfig config) {
-		if (!config.pestCooldownAlert || state != State.TIMING || lastParseCoarse) {
-			return false;
+		return config.pestCooldownAlert && alertCountdownSeconds() > 0;
+	}
+
+	public int alertCountdownSeconds() {
+		if (countdownEndsAtMs <= 0) {
+			return -1;
 		}
-		int remaining = remainingSeconds();
-		return remaining > 0 && remaining <= Math.max(1, config.pestCooldownAlertSeconds);
+		long left = countdownEndsAtMs - System.currentTimeMillis();
+		if (left <= 0) {
+			return 0;
+		}
+		return (int) Math.ceil(left / 1000.0);
 	}
 
 	public int remainingSeconds() {
@@ -109,10 +133,12 @@ public final class PestCooldownTracker {
 
 	public void reset() {
 		endsAtMs = 0;
+		countdownEndsAtMs = 0;
 		state = State.UNKNOWN;
 		alertArmed = true;
 		lastParseCoarse = false;
 		lastBeepSecond = -1;
+		previousRemaining = -1;
 		awayTicks = 0;
 		seenCooldownLine = false;
 	}
@@ -238,11 +264,11 @@ public final class PestCooldownTracker {
 		}
 	}
 
-	private static void pushTitle(Minecraft client, int remaining) {
-		Component title = Component.literal("PEST " + remaining + "s")
+	private static void pushTitle(Minecraft client, int countdown) {
+		Component title = Component.literal("PEST " + countdown)
 				.withStyle(ChatFormatting.RED, ChatFormatting.BOLD);
-		Component subtitle = Component.literal("Cooldown bientôt fini").withStyle(ChatFormatting.GOLD);
-		client.gui.setTimes(0, 30, 10);
+		Component subtitle = Component.literal("Cooldown 2m50").withStyle(ChatFormatting.GOLD);
+		client.gui.setTimes(0, 25, 8);
 		client.gui.setSubtitle(subtitle);
 		client.gui.setTitle(title);
 		client.gui.setOverlayMessage(title, false);

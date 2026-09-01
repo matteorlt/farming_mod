@@ -28,21 +28,21 @@ public final class PestCooldownAlertHud {
 			return;
 		}
 
-		int remaining = tracker.remainingSeconds();
+		int countdown = tracker.alertCountdownSeconds();
 		Font font = client.font;
 		int windowWidth = client.getWindow().getGuiScaledWidth();
 		int windowHeight = client.getWindow().getGuiScaledHeight();
 
 		String title = "PEST";
-		String countdown = remaining + "s";
-		String hint = "Cooldown bientôt fini";
+		String countText = String.valueOf(countdown);
+		String hint = "Cooldown 2m50";
 
-		int color = remaining <= 3 ? 0xFFFF1744 : 0xFFFFEA00;
+		int color = countdown <= 2 ? 0xFFFF1744 : 0xFFFFEA00;
 		int y = Math.round(windowHeight * 0.22f);
 		graphics.fill(0, y - 12, windowWidth, y + 78, 0xC0000000);
 
 		drawCentered(graphics, font, title, windowWidth, y, 3.2f, 0xFFFF6D00);
-		drawCentered(graphics, font, countdown, windowWidth, y + 28, remaining <= 3 ? 6.0f : 5.2f, color);
+		drawCentered(graphics, font, countText, windowWidth, y + 28, countdown <= 2 ? 6.4f : 5.6f, color);
 		drawCentered(graphics, font, hint, windowWidth, y + 64, 1.4f, 0xFFFFF8E1);
 	}
 

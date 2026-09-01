@@ -144,7 +144,7 @@ public class FarmingProfitClient implements ClientModInitializer {
 							config.pestCooldownAlert = !config.pestCooldownAlert;
 							config.save();
 							feedback(ctx, config.pestCooldownAlert
-									? "Alerte cooldown pest : ON (moins de " + config.pestCooldownAlertSeconds + "s)."
+									? "Alerte cooldown pest : ON (à 2m50, compte à rebours 5s)."
 									: "Alerte cooldown pest : OFF.");
 							return 1;
 						}))

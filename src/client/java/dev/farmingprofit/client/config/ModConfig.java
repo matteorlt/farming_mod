@@ -31,9 +31,12 @@ public final class ModConfig {
 	public String farmLoadoutName = "Farm";
 	/** Vérifie GitHub (matteorlt/farming_mod) au login. */
 	public boolean checkUpdates = true;
-	/** Gros titre + son quand le cooldown pest du tab passe sous le seuil. */
+	/** Gros titre + son à 2m50 de cooldown pest, compte à rebours 5s. */
 	public boolean pestCooldownAlert = true;
-	public int pestCooldownAlertSeconds = 10;
+	/** Déclenche l’alerte quand le cooldown tab atteint ce temps (170 = 2m50). */
+	public int pestCooldownAlertAtSeconds = 170;
+	/** Durée du compte à rebours affiché (secondes). */
+	public int pestCooldownAlertCountdown = 5;
 
 	public static ModConfig load() {
 		if (!Files.exists(PATH)) {

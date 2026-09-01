@@ -71,7 +71,7 @@ Noms dans `farmingprofit.json` : `pestLoadoutName` (défaut `Pest`), `farmLoadou
 
 ## Alerte cooldown Pest (tab)
 
-Le widget **Pests** du tab Hypixel affiche un chrono `Cooldown: 1m 58s`. Quand il reste **10 secondes ou moins**, un gros titre s’affiche au milieu de l’écran avec un son (carillon).
+Le widget **Pests** du tab Hypixel affiche un chrono `Cooldown: 1m 58s`. À **2m50** restantes, un gros titre s’affiche avec un **compte à rebours de 5 secondes** et un son.
 
 Le widget Pests doit être activé : `/widget` → Pests.
 
@@ -79,7 +79,7 @@ Le widget Pests doit être activé : `/widget` → Pests.
 | --- | --- |
 | `/fprofit pestalert` | Active ou désactive l’alerte (défaut : ON) |
 
-Seuil dans `farmingprofit.json` : `pestCooldownAlertSeconds` (défaut `10`).
+Réglages dans `farmingprofit.json` : `pestCooldownAlertAtSeconds` (défaut `170` = 2m50), `pestCooldownAlertCountdown` (défaut `5`).
 
 ## Vente NPC (sacks + cookie menu)
 
