@@ -6,6 +6,7 @@ Mod Fabric **client-only** pour Minecraft **26.1.2** (Hypixel SkyBlock Garden).
 - Hitbox crops mature = 1 bloc
 - Visitor's Logbook : unique served
 - Loadout Pest / Farm via canne à pêche
+- Alerte cooldown pest (tab, < 10s)
 - Vente NPC (`/fprofit sell`)
 
 ## Installation
@@ -27,7 +28,7 @@ Java 25 requis.
 ./gradlew.bat build
 ```
 
-JAR : `build/libs/farmingprofit-1.0.1.jar`
+JAR : `build/libs/farmingprofit-1.0.2.jar`
 
 ## Mise à jour
 

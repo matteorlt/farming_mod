@@ -31,6 +31,9 @@ public final class ModConfig {
 	public String farmLoadoutName = "Farm";
 	/** Vérifie GitHub (matteorlt/farming_mod) au login. */
 	public boolean checkUpdates = true;
+	/** Gros titre + son quand le cooldown pest du tab passe sous le seuil. */
+	public boolean pestCooldownAlert = true;
+	public int pestCooldownAlertSeconds = 10;
 
 	public static ModConfig load() {
 		if (!Files.exists(PATH)) {

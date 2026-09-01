@@ -12,8 +12,10 @@ import dev.farmingprofit.client.config.ModConfig;
 import dev.farmingprofit.client.garden.Crop;
 import dev.farmingprofit.client.garden.FarmingTracker;
 import dev.farmingprofit.client.garden.GardenDetector;
+import dev.farmingprofit.client.garden.PestCooldownTracker;
 import dev.farmingprofit.client.garden.VisitorLogbookStats;
 import dev.farmingprofit.client.hud.HudMoveScreen;
+import dev.farmingprofit.client.hud.PestCooldownAlertHud;
 import dev.farmingprofit.client.hud.PestModeHud;
 import dev.farmingprofit.client.hud.ProfitHud;
 import dev.farmingprofit.client.loadout.PestLoadoutService;
@@ -38,6 +40,7 @@ public class FarmingProfitClient implements ClientModInitializer {
 	private static CoflBazaarService prices;
 	private static NpcSellService npcSell;
 	private static PestLoadoutService pestLoadout;
+	private static PestCooldownTracker pestCooldown;
 	private static UpdateChecker updates;
 
 	@Override
@@ -48,6 +51,7 @@ public class FarmingProfitClient implements ClientModInitializer {
 		prices.start();
 		npcSell = new NpcSellService();
 		pestLoadout = new PestLoadoutService(config);
+		pestCooldown = new PestCooldownTracker();
 		updates = new UpdateChecker();
 
 		HudElementRegistry.attachElementBefore(
@@ -60,6 +64,11 @@ public class FarmingProfitClient implements ClientModInitializer {
 				FarmingProfitMod.id("pest_mode"),
 				(graphics, delta) -> PestModeHud.render(graphics, delta, config, pestLoadout)
 		);
+		HudElementRegistry.attachElementBefore(
+				VanillaHudElements.CHAT,
+				FarmingProfitMod.id("pest_cooldown_alert"),
+				(graphics, delta) -> PestCooldownAlertHud.render(graphics, delta, config, pestCooldown)
+		);
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			GardenDetector.tick(client);
@@ -68,6 +77,7 @@ public class FarmingProfitClient implements ClientModInitializer {
 			npcSell.tick(client);
 			VisitorLogbookStats.tick(client);
 			pestLoadout.tick(client);
+			pestCooldown.tick(client, config);
 			updates.tick(client);
 		});
 
@@ -89,6 +99,7 @@ public class FarmingProfitClient implements ClientModInitializer {
 			tracker.resetSession();
 			VisitorLogbookStats.reset();
 			pestLoadout.resetSession();
+			pestCooldown.reset();
 			if (npcSell.running()) {
 				npcSell.cancel();
 			}
@@ -128,6 +139,14 @@ public class FarmingProfitClient implements ClientModInitializer {
 								feedback(ctx, "Ouverture /loadout → " + config.pestLoadoutName + "...");
 							}
 							pestLoadout.startFromCommand();
+							return 1;
+						}))
+						.then(literal("pestalert").executes(ctx -> {
+							config.pestCooldownAlert = !config.pestCooldownAlert;
+							config.save();
+							feedback(ctx, config.pestCooldownAlert
+									? "Alerte cooldown pest : ON (moins de " + config.pestCooldownAlertSeconds + "s)."
+									: "Alerte cooldown pest : OFF.");
 							return 1;
 						}))
 						.then(literal("update")
@@ -205,7 +224,7 @@ public class FarmingProfitClient implements ClientModInitializer {
 	}
 
 	private static int help(CommandContext<FabricClientCommandSource> ctx) {
-		ctx.getSource().sendFeedback(Component.literal("Farming Profit — /fprofit sell <item> [fois] | pest | update [install] | sell cancel | move [x y|reset] | reset | toggle | hitbox | prices | mode <OFFER|INSTANT>").withStyle(ChatFormatting.GOLD));
+		ctx.getSource().sendFeedback(Component.literal("Farming Profit — /fprofit sell <item> [fois] | pest | pestalert | update [install] | sell cancel | move [x y|reset] | reset | toggle | hitbox | prices | mode <OFFER|INSTANT>").withStyle(ChatFormatting.GOLD));
 		return 1;
 	}
 
