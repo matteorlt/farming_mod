@@ -1,0 +1,34 @@
+{
+	"schemaVersion": 1,
+	"id": "farmingprofit",
+	"version": "${version}",
+	"name": "Farming Profit",
+	"description": "Compte les coins/heure en farmant des crops sur le Garden Hypixel SkyBlock, avec les prix Bazaar Cofl (enchanted / 160).",
+	"authors": [
+		"matte"
+	],
+	"contact": {
+		"homepage": "https://github.com/matteorlt/farming_mod",
+		"sources": "https://github.com/matteorlt/farming_mod",
+		"issues": "https://github.com/matteorlt/farming_mod/issues"
+	},
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"main": [
+			"dev.farmingprofit.FarmingProfitMod"
+		],
+		"client": [
+			"dev.farmingprofit.client.FarmingProfitClient"
+		]
+	},
+	"mixins": [
+		"farmingprofit.client.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.1",
+		"minecraft": "~26.1",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
