@@ -68,9 +68,7 @@ public class FarmingProfitClient implements ClientModInitializer {
 			npcSell.tick(client);
 			VisitorLogbookStats.tick(client);
 			pestLoadout.tick(client);
-			if (config.checkUpdates) {
-				updates.tick(client);
-			}
+			updates.tick(client);
 		});
 
 		ClientPlayerBlockBreakEvents.AFTER.register((world, player, pos, state) -> {
@@ -132,15 +130,24 @@ public class FarmingProfitClient implements ClientModInitializer {
 							pestLoadout.startFromCommand();
 							return 1;
 						}))
-						.then(literal("update").executes(ctx -> {
-							if (!config.checkUpdates) {
-								feedback(ctx, "Vérif updates désactivée (checkUpdates dans farmingprofit.json).");
-								return 0;
-							}
-							updates.refreshNow();
-							feedback(ctx, "Vérification GitHub…");
-							return 1;
-						}))
+						.then(literal("update")
+								.executes(ctx -> {
+									if (!config.checkUpdates) {
+										feedback(ctx, "Vérif updates désactivée (checkUpdates dans farmingprofit.json).");
+										return 0;
+									}
+									updates.refreshNow();
+									feedback(ctx, "Vérification GitHub…");
+									return 1;
+								})
+								.then(literal("install").executes(ctx -> {
+									if (!config.checkUpdates) {
+										feedback(ctx, "Vérif updates désactivée (checkUpdates dans farmingprofit.json).");
+										return 0;
+									}
+									updates.installNow();
+									return 1;
+								})))
 						.then(literal("prices").executes(ctx -> {
 							prices.refreshNow();
 							feedback(ctx, "Rafraîchissement des prix Cofl...");
@@ -198,7 +205,7 @@ public class FarmingProfitClient implements ClientModInitializer {
 	}
 
 	private static int help(CommandContext<FabricClientCommandSource> ctx) {
-		ctx.getSource().sendFeedback(Component.literal("Farming Profit — /fprofit sell <item> [fois] | pest | update | sell cancel | move [x y|reset] | reset | toggle | hitbox | prices | mode <OFFER|INSTANT>").withStyle(ChatFormatting.GOLD));
+		ctx.getSource().sendFeedback(Component.literal("Farming Profit — /fprofit sell <item> [fois] | pest | update [install] | sell cancel | move [x y|reset] | reset | toggle | hitbox | prices | mode <OFFER|INSTANT>").withStyle(ChatFormatting.GOLD));
 		return 1;
 	}
 

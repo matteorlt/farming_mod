@@ -20,7 +20,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Build
-        run: ./gradlew build --no-daemon
+        run: |
+          chmod +x gradlew
+          ./gradlew build --no-daemon
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:

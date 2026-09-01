@@ -20,6 +20,7 @@ Le HUD s’affiche dès qu’un **outil de farm** est en main. La crop vient du 
 | `/fprofit reset` | Reset la session de farm (compteur, temps, profit) |
 | `/fprofit prices` | Rafraîchit les prix Bazaar Cofl |
 | `/fprofit update` | Vérifie s’il y a une nouvelle version GitHub |
+| `/fprofit update install` | Télécharge le JAR, ferme Minecraft, relance le jeu |
 | `/fprofit mode OFFER` | Prix **sell offer** (défaut, `buyPrice` Cofl / 160) |
 | `/fprofit mode INSTANT` | Prix **instant sell** (`sellPrice` Cofl / 160) |
 
@@ -94,11 +95,14 @@ Seul l’item nommé est vendu. Les autres slots de l’inventaire ne sont pas c
 
 ## Mises à jour
 
-Au login (si internet), le mod compare sa version à https://github.com/matteorlt/farming_mod/releases et affiche un lien si une update existe. Il faut **fermer Minecraft** pour remplacer le JAR : Fabric ne peut pas recharger un mod à chaud.
+Au login (si internet), le mod compare sa version à https://github.com/matteorlt/farming_mod/releases. S’il y a une update, un bouton **[Installer]** apparaît dans le chat : ça télécharge le JAR dans `mods/`, ferme Minecraft, puis un script remplace l’ancien fichier. Il suffit de **relancer le jeu**.
+
+Windows verrouille le JAR tant que Minecraft tourne : d’où la fermeture automatique (comme libautoupdate / ModUpdater).
 
 | Commande | Description |
 | --- | --- |
 | `/fprofit update` | Relance la vérif GitHub |
+| `/fprofit update install` | Installe la dernière release et ferme le jeu |
 
 Désactiver : `"checkUpdates": false` dans `farmingprofit.json`.
 

@@ -27,10 +27,8 @@ Java 25 requis.
 ./gradlew.bat build
 ```
 
-JAR : `build/libs/farmingprofit-1.0.0.jar`
+JAR : `build/libs/farmingprofit-1.0.1.jar`
 
 ## Mise à jour
 
-Au login, le mod compare sa version à la dernière release GitHub et affiche un lien dans le chat si une update existe.
-
-Un JAR déjà chargé par Fabric **ne peut pas** être remplacé à chaud : il faut fermer Minecraft, mettre le nouveau JAR dans `mods/`, et relancer. Relancer le launcher tout seul depuis le jeu n’est pas fiable (Prism, official launcher, etc.).
+Au login, le mod compare sa version à la dernière release GitHub. Clique **[Installer]** dans le chat (ou `/fprofit update install`) : le nouveau JAR est téléchargé, Minecraft se ferme, puis il suffit de relancer.
