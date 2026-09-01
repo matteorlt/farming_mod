@@ -37,13 +37,17 @@ public final class PestCooldownTracker {
 	private int previousRemaining = -1;
 	private int awayTicks;
 	private boolean seenCooldownLine;
+	private boolean pendingAlertTrigger;
 
 	public enum State {
 		UNKNOWN, TIMING, READY, MAX
 	}
 
 	public void tick(Minecraft client, ModConfig config) {
-		if (!config.pestCooldownAlert || client.player == null) {
+		if (client.player == null) {
+			return;
+		}
+		if (!config.pestCooldownAlert && !config.autoPestLoadout) {
 			return;
 		}
 
@@ -74,11 +78,16 @@ public final class PestCooldownTracker {
 		boolean joinedInWindow = previousRemaining < 0 && inWindow;
 		if (alertArmed && state == State.TIMING && !lastParseCoarse && (crossed || joinedInWindow)) {
 			alertArmed = false;
+			pendingAlertTrigger = true;
 			int length = Math.max(1, config.pestCooldownAlertCountdown);
 			countdownEndsAtMs = System.currentTimeMillis() + length * 1000L;
 			lastBeepSecond = -1;
 		}
 		previousRemaining = remaining;
+
+		if (!config.pestCooldownAlert) {
+			return;
+		}
 
 		int countdown = alertCountdownSeconds();
 		if (countdown <= 0) {
@@ -131,6 +140,14 @@ public final class PestCooldownTracker {
 		return seenCooldownLine;
 	}
 
+	public boolean consumeAlertTrigger() {
+		if (!pendingAlertTrigger) {
+			return false;
+		}
+		pendingAlertTrigger = false;
+		return true;
+	}
+
 	public void reset() {
 		endsAtMs = 0;
 		countdownEndsAtMs = 0;
@@ -141,6 +158,7 @@ public final class PestCooldownTracker {
 		previousRemaining = -1;
 		awayTicks = 0;
 		seenCooldownLine = false;
+		pendingAlertTrigger = false;
 	}
 
 	private boolean parseTab(Minecraft client) {

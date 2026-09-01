@@ -23,6 +23,7 @@ import dev.farmingprofit.client.prices.CoflBazaarService;
 import dev.farmingprofit.client.sell.NpcSellService;
 import dev.farmingprofit.client.update.UpdateChecker;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -75,8 +76,11 @@ public class FarmingProfitClient implements ClientModInitializer {
 			prices.tick();
 			npcSell.tick(client);
 			VisitorLogbookStats.tick(client);
-			pestLoadout.tick(client);
 			pestCooldown.tick(client, config);
+			if (pestCooldown.consumeAlertTrigger()) {
+				pestLoadout.onPestAlert();
+			}
+			pestLoadout.tick(client);
 			updates.tick(client);
 		});
 
@@ -84,6 +88,12 @@ public class FarmingProfitClient implements ClientModInitializer {
 			Crop crop = Crop.fromBlock(state.getBlock());
 			if (crop != null) {
 				tracker.onBlockBroken(crop);
+			}
+		});
+
+		ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+			if (!overlay) {
+				pestLoadout.onChat(message.getString());
 			}
 		});
 
@@ -146,6 +156,17 @@ public class FarmingProfitClient implements ClientModInitializer {
 							feedback(ctx, config.pestCooldownAlert
 									? "Alerte cooldown pest : ON (à 2m50, compte à rebours 5s)."
 									: "Alerte cooldown pest : OFF.");
+							return 1;
+						}))
+						.then(literal("pestauto").executes(ctx -> {
+							config.autoPestLoadout = !config.autoPestLoadout;
+							config.save();
+							if (!config.autoPestLoadout) {
+								pestLoadout.cancelPendingAuto();
+							}
+							feedback(ctx, config.autoPestLoadout
+									? "Auto loadout : ON (Pest à 2m50, Farm 2s après le spawn)."
+									: "Auto loadout : OFF.");
 							return 1;
 						}))
 						.then(literal("update")
@@ -223,7 +244,7 @@ public class FarmingProfitClient implements ClientModInitializer {
 	}
 
 	private static int help(CommandContext<FabricClientCommandSource> ctx) {
-		ctx.getSource().sendFeedback(Component.literal("Farming Profit — /fprofit sell <item> [fois] | pest | pestalert | update [install] | sell cancel | move [x y|reset] | reset | toggle | hitbox | prices | mode <OFFER|INSTANT>").withStyle(ChatFormatting.GOLD));
+		ctx.getSource().sendFeedback(Component.literal("Farming Profit — /fprofit sell <item> [fois] | pest | pestauto | pestalert | update [install] | sell cancel | move [x y|reset] | reset | toggle | hitbox | prices | mode <OFFER|INSTANT>").withStyle(ChatFormatting.GOLD));
 		return 1;
 	}
 

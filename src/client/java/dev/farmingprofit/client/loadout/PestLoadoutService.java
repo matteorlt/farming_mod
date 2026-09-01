@@ -1,9 +1,11 @@
 package dev.farmingprofit.client.loadout;
 
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 import dev.farmingprofit.FarmingProfitMod;
 import dev.farmingprofit.client.config.ModConfig;
+import dev.farmingprofit.client.garden.GardenDetector;
 import dev.farmingprofit.client.garden.SkyblockItems;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -28,6 +30,10 @@ public final class PestLoadoutService {
 	private static final int CLICK_DELAY_TICKS = 4;
 	private static final int CLOSE_DELAY_TICKS = 6;
 	private static final long RETRIGGER_COOLDOWN_MS = 2500L;
+	private static final long FARM_AFTER_SPAWN_MS = 2000L;
+	private static final Pattern PEST_SPAWN = Pattern.compile(
+			"(?i)(?:eww|yuck|gross|ew).{0,32}pest|(?i)pests? (?:have )?spawned"
+	);
 
 	private enum Phase {
 		IDLE, OPEN_MENU, WAIT_MENU, CLICK, CLOSING
@@ -40,13 +46,17 @@ public final class PestLoadoutService {
 	private boolean wasUseDown;
 	private long lastTriggerMs;
 	private String pendingTarget = "Pest";
+	private boolean quiet;
+	private Boolean queuedToPest;
+	private boolean expectFarmAfterSpawn;
+	private long farmSwitchAtMs;
 
 	public PestLoadoutService(ModConfig config) {
 		this.config = config;
 	}
 
 	public boolean pestMode() {
-		return pestMode && config.pestRodLoadout;
+		return pestMode;
 	}
 
 	public void setPestMode(boolean pestMode) {
@@ -58,6 +68,7 @@ public final class PestLoadoutService {
 	}
 
 	public void cancel() {
+		queuedToPest = null;
 		reset();
 	}
 
@@ -65,6 +76,61 @@ public final class PestLoadoutService {
 		reset();
 		pestMode = false;
 		wasUseDown = false;
+		queuedToPest = null;
+		expectFarmAfterSpawn = false;
+		farmSwitchAtMs = 0;
+	}
+
+	public void cancelPendingAuto() {
+		queuedToPest = null;
+		expectFarmAfterSpawn = false;
+		farmSwitchAtMs = 0;
+	}
+
+	public void onPestAlert() {
+		if (!config.autoPestLoadout) {
+			return;
+		}
+		expectFarmAfterSpawn = true;
+		requestSwitch(true);
+	}
+
+	public void onChat(String raw) {
+		if (!config.autoPestLoadout || raw == null || raw.isBlank()) {
+			return;
+		}
+		String text = strip(raw);
+		if (text.startsWith("[Farming Profit]")) {
+			return;
+		}
+		if (!PEST_SPAWN.matcher(text).find()) {
+			return;
+		}
+		if (!GardenDetector.inGarden() && !expectFarmAfterSpawn && !pestMode) {
+			return;
+		}
+		if (!expectFarmAfterSpawn && !pestMode) {
+			return;
+		}
+		farmSwitchAtMs = System.currentTimeMillis() + FARM_AFTER_SPAWN_MS;
+		FarmingProfitMod.LOGGER.info("Pest spawn detected, Farm loadout in {}ms", FARM_AFTER_SPAWN_MS);
+	}
+
+	public void requestSwitch(boolean toPest) {
+		Minecraft client = Minecraft.getInstance();
+		LocalPlayer player = client.player;
+		if (player == null) {
+			return;
+		}
+		if (toPest == pestMode && !running()) {
+			return;
+		}
+		if (running()) {
+			queuedToPest = toPest;
+			return;
+		}
+		quiet = true;
+		start(client, player, toPest, true);
 	}
 
 	/** Toggle canne : Pest si inactif, Farm si Mode Pest. */
@@ -77,18 +143,11 @@ public final class PestLoadoutService {
 			chat("Changement de loadout déjà en cours.", ChatFormatting.RED);
 			return;
 		}
-		start(client, client.player, !pestMode);
+		quiet = false;
+		start(client, client.player, !pestMode, true);
 	}
 
 	public void tick(Minecraft client) {
-		if (!config.pestRodLoadout) {
-			wasUseDown = client.options.keyUse.isDown();
-			if (running()) {
-				reset();
-			}
-			return;
-		}
-
 		LocalPlayer player = client.player;
 		if (player == null || client.gameMode == null) {
 			if (running()) {
@@ -98,17 +157,24 @@ public final class PestLoadoutService {
 			return;
 		}
 
-		if (phase == Phase.IDLE) {
-			scanOpenLoadout(client);
+		if (config.autoPestLoadout && farmSwitchAtMs > 0 && System.currentTimeMillis() >= farmSwitchAtMs) {
+			farmSwitchAtMs = 0;
+			expectFarmAfterSpawn = false;
+			requestSwitch(false);
 		}
 
 		boolean useDown = client.options.keyUse.isDown();
 		boolean rising = useDown && !wasUseDown;
 		wasUseDown = useDown;
-		if (rising && phase == Phase.IDLE && client.screen == null) {
+		if (config.pestRodLoadout && rising && phase == Phase.IDLE && client.screen == null) {
 			if (isFishingRod(player.getMainHandItem()) || isFishingRod(player.getOffhandItem())) {
-				start(client, player, !pestMode);
+				quiet = false;
+				start(client, player, !pestMode, false);
 			}
+		}
+
+		if (phase == Phase.IDLE) {
+			scanOpenLoadout(client);
 		}
 
 		if (!running()) {
@@ -163,8 +229,15 @@ public final class PestLoadoutService {
 					if (client.screen != null) {
 						client.setScreen(null);
 					}
-					chat("Loadout " + pendingTarget + " équipé.", ChatFormatting.GREEN);
+					if (!quiet) {
+						chat("Loadout " + pendingTarget + " équipé.", ChatFormatting.GREEN);
+					}
+					Boolean next = queuedToPest;
+					queuedToPest = null;
 					reset();
+					if (next != null) {
+						requestSwitch(next);
+					}
 				}
 			}
 			case IDLE -> {
@@ -172,9 +245,9 @@ public final class PestLoadoutService {
 		}
 	}
 
-	private void start(Minecraft client, LocalPlayer player, boolean toPest) {
+	private void start(Minecraft client, LocalPlayer player, boolean toPest, boolean ignoreCooldown) {
 		long now = System.currentTimeMillis();
-		if (now - lastTriggerMs < RETRIGGER_COOLDOWN_MS) {
+		if (!ignoreCooldown && now - lastTriggerMs < RETRIGGER_COOLDOWN_MS) {
 			return;
 		}
 		lastTriggerMs = now;

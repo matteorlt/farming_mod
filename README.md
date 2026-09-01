@@ -7,6 +7,7 @@ Mod Fabric **client-only** pour Minecraft **26.1.2** (Hypixel SkyBlock Garden).
 - Visitor's Logbook : unique served
 - Loadout Pest / Farm via canne à pêche
 - Alerte cooldown pest (tab, à 2m50, compte à rebours 5s)
+- Auto loadout Pest à 2m50, Farm 2s après spawn
 - Vente NPC (`/fprofit sell`)
 
 ## Installation
@@ -28,7 +29,7 @@ Java 25 requis.
 ./gradlew.bat build
 ```
 
-JAR : `build/libs/farmingprofit-1.0.4.jar`
+JAR : `build/libs/farmingprofit-1.0.5.jar`
 
 ## Mise à jour
 

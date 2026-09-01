@@ -66,6 +66,7 @@ Clic droit avec une **canne à pêche** :
 | --- | --- |
 | `/fprofit pest` | Toggle Pest / Farm (comme la canne) |
 | `/fprofit pestalert` | Active ou désactive l’alerte cooldown pest (tab) |
+| `/fprofit pestauto` | Auto loadout Pest à 2m50, Farm 2s après le spawn |
 
 Noms dans `farmingprofit.json` : `pestLoadoutName` (défaut `Pest`), `farmLoadoutName` (défaut `Farm`).
 
@@ -80,6 +81,12 @@ Le widget Pests doit être activé : `/widget` → Pests.
 | `/fprofit pestalert` | Active ou désactive l’alerte (défaut : ON) |
 
 Réglages dans `farmingprofit.json` : `pestCooldownAlertAtSeconds` (défaut `170` = 2m50), `pestCooldownAlertCountdown` (défaut `5`).
+
+À **2m50**, si `autoPestLoadout` est ON, le mod équipe le loadout **Pest**. **2 secondes après** le message de spawn Hypixel, il remet **Farm**.
+
+| Commande | Description |
+| --- | --- |
+| `/fprofit pestauto` | Active ou désactive le switch auto (défaut : ON) |
 
 ## Vente NPC (sacks + cookie menu)
 
