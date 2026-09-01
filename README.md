@@ -29,7 +29,7 @@ Java 25 requis.
 ./gradlew.bat build
 ```
 
-JAR : `build/libs/farmingprofit-1.0.5.jar`
+JAR : `build/libs/farmingprofit-1.0.6.jar`
 
 ## Mise à jour
 

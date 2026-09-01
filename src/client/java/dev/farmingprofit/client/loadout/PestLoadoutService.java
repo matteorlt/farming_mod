@@ -50,6 +50,7 @@ public final class PestLoadoutService {
 	private Boolean queuedToPest;
 	private boolean expectFarmAfterSpawn;
 	private long farmSwitchAtMs;
+	private int attackPulseTicks;
 
 	public PestLoadoutService(ModConfig config) {
 		this.config = config;
@@ -79,6 +80,7 @@ public final class PestLoadoutService {
 		queuedToPest = null;
 		expectFarmAfterSpawn = false;
 		farmSwitchAtMs = 0;
+		stopAttackPulse(Minecraft.getInstance());
 	}
 
 	public void cancelPendingAuto() {
@@ -154,8 +156,11 @@ public final class PestLoadoutService {
 				reset();
 			}
 			wasUseDown = false;
+			stopAttackPulse(client);
 			return;
 		}
+
+		tickAttackPulse(client);
 
 		if (config.autoPestLoadout && farmSwitchAtMs > 0 && System.currentTimeMillis() >= farmSwitchAtMs) {
 			farmSwitchAtMs = 0;
@@ -234,9 +239,12 @@ public final class PestLoadoutService {
 					}
 					Boolean next = queuedToPest;
 					queuedToPest = null;
+					boolean pulseAttack = isPestName(pendingTarget) && next == null;
 					reset();
 					if (next != null) {
 						requestSwitch(next);
+					} else if (pulseAttack) {
+						startAttackPulse(client);
 					}
 				}
 			}
@@ -372,6 +380,34 @@ public final class PestLoadoutService {
 	private static String strip(String value) {
 		String stripped = ChatFormatting.stripFormatting(value);
 		return stripped == null ? "" : stripped.trim();
+	}
+
+	private void startAttackPulse(Minecraft client) {
+		if (client.options.keyAttack.isDown()) {
+			return;
+		}
+		client.options.keyAttack.setDown(true);
+		attackPulseTicks = 1;
+	}
+
+	private void tickAttackPulse(Minecraft client) {
+		if (attackPulseTicks <= 0) {
+			return;
+		}
+		attackPulseTicks--;
+		if (attackPulseTicks <= 0) {
+			client.options.keyAttack.setDown(false);
+		}
+	}
+
+	private void stopAttackPulse(Minecraft client) {
+		if (attackPulseTicks <= 0) {
+			return;
+		}
+		attackPulseTicks = 0;
+		if (client.options != null) {
+			client.options.keyAttack.setDown(false);
+		}
 	}
 
 	private void reset() {

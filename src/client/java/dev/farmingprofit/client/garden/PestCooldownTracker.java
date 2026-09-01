@@ -6,9 +6,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import dev.farmingprofit.client.config.ModConfig;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.sounds.SoundEvent;
@@ -38,6 +36,7 @@ public final class PestCooldownTracker {
 	private int awayTicks;
 	private boolean seenCooldownLine;
 	private boolean pendingAlertTrigger;
+	private boolean firedThisCycle;
 
 	public enum State {
 		UNKNOWN, TIMING, READY, MAX
@@ -65,19 +64,22 @@ public final class PestCooldownTracker {
 		int remaining = remainingSeconds();
 		int triggerAt = Math.max(1, config.pestCooldownAlertAtSeconds);
 		int windowLow = Math.max(1, triggerAt - 20);
-		if (state == State.TIMING && !lastParseCoarse && remaining > triggerAt + 5) {
+		if (state == State.TIMING && !lastParseCoarse && remaining > Math.max(triggerAt + 30, 200)) {
 			alertArmed = true;
+			firedThisCycle = false;
 		}
 		if (state == State.READY || state == State.MAX) {
 			alertArmed = true;
+			firedThisCycle = false;
 			countdownEndsAtMs = 0;
 		}
 
 		boolean inWindow = remaining > 0 && remaining <= triggerAt && remaining >= windowLow;
 		boolean crossed = previousRemaining > triggerAt && remaining <= triggerAt && remaining >= windowLow;
 		boolean joinedInWindow = previousRemaining < 0 && inWindow;
-		if (alertArmed && state == State.TIMING && !lastParseCoarse && (crossed || joinedInWindow)) {
+		if (alertArmed && !firedThisCycle && state == State.TIMING && !lastParseCoarse && (crossed || joinedInWindow)) {
 			alertArmed = false;
+			firedThisCycle = true;
 			pendingAlertTrigger = true;
 			int length = Math.max(1, config.pestCooldownAlertCountdown);
 			countdownEndsAtMs = System.currentTimeMillis() + length * 1000L;
@@ -95,7 +97,6 @@ public final class PestCooldownTracker {
 		}
 		if (lastBeepSecond != countdown) {
 			lastBeepSecond = countdown;
-			pushTitle(client, countdown);
 			if (countdown == Math.max(1, config.pestCooldownAlertCountdown)) {
 				playLoud(client, SoundEvents.PLAYER_LEVELUP, 0.9f, 3.0f);
 				playLoud(client, SoundEvents.NOTE_BLOCK_PLING.value(), 1.4f, 3.0f);
@@ -159,6 +160,7 @@ public final class PestCooldownTracker {
 		awayTicks = 0;
 		seenCooldownLine = false;
 		pendingAlertTrigger = false;
+		firedThisCycle = false;
 	}
 
 	private boolean parseTab(Minecraft client) {
@@ -205,9 +207,12 @@ public final class PestCooldownTracker {
 
 		if (coarse) {
 			state = State.TIMING;
-			if (current < 0 || seconds > current + 3) {
+			if (current < 0 || seconds > current + 60) {
 				endsAtMs = candidate;
-				alertArmed = true;
+				if (seconds > 200) {
+					alertArmed = true;
+					firedThisCycle = false;
+				}
 			} else {
 				endsAtMs = candidate;
 			}
@@ -217,13 +222,17 @@ public final class PestCooldownTracker {
 		if (state != State.TIMING || endsAtMs <= 0 || current < 0) {
 			endsAtMs = candidate;
 			state = State.TIMING;
-			alertArmed = true;
+			if (seconds > 200) {
+				alertArmed = true;
+				firedThisCycle = false;
+			}
 			return;
 		}
-		if (seconds > current + 3) {
+		if (seconds > current + 60) {
 			endsAtMs = candidate;
 			state = State.TIMING;
 			alertArmed = true;
+			firedThisCycle = false;
 			lastBeepSecond = -1;
 			return;
 		}
@@ -280,16 +289,6 @@ public final class PestCooldownTracker {
 		} catch (NumberFormatException e) {
 			return -1;
 		}
-	}
-
-	private static void pushTitle(Minecraft client, int countdown) {
-		Component title = Component.literal("PEST " + countdown)
-				.withStyle(ChatFormatting.RED, ChatFormatting.BOLD);
-		Component subtitle = Component.literal("Cooldown 2m50").withStyle(ChatFormatting.GOLD);
-		client.gui.setTimes(0, 25, 8);
-		client.gui.setSubtitle(subtitle);
-		client.gui.setTitle(title);
-		client.gui.setOverlayMessage(title, false);
 	}
 
 	private static void playLoud(Minecraft client, SoundEvent sound, float pitch, float volume) {
