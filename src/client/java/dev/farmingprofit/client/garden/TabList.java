@@ -14,28 +14,29 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.scores.PlayerTeam;
 
 /**
- * Lignes du tab Hypixel (widgets inclus, souvent des faux joueurs unlistés).
+ * Lignes du tab Hypixel (widgets = prefix/suffix d’équipes, faux joueurs unlistés).
  */
 public final class TabList {
 	private TabList() {
 	}
 
 	public static List<String> lines(Minecraft client) {
-		List<String> lines = new ArrayList<>();
+		LinkedHashSet<String> unique = new LinkedHashSet<>();
 		if (client.player == null || client.player.connection == null) {
-			return lines;
+			return List.of();
 		}
 		ClientPacketListener connection = client.player.connection;
 		Set<PlayerInfo> entries = new LinkedHashSet<>();
 		addAll(entries, connection.getListedOnlinePlayers());
 		addAll(entries, connection.getOnlinePlayers());
 		for (PlayerInfo info : entries) {
-			String line = lineOf(info);
-			if (!line.isBlank()) {
-				lines.add(line);
+			for (String line : lineVariants(info)) {
+				if (!line.isBlank()) {
+					unique.add(line);
+				}
 			}
 		}
-		return lines;
+		return new ArrayList<>(unique);
 	}
 
 	private static void addAll(Set<PlayerInfo> target, Collection<PlayerInfo> source) {
@@ -44,27 +45,46 @@ public final class TabList {
 		}
 	}
 
-	private static String lineOf(PlayerInfo info) {
+	private static List<String> lineVariants(PlayerInfo info) {
+		List<String> variants = new ArrayList<>(3);
 		Component display = info.getTabListDisplayName();
 		if (display != null) {
-			String text = strip(display.getString());
-			if (!text.isBlank()) {
-				return text;
-			}
+			addClean(variants, display.getString());
 		}
-		String name = info.getProfile().name();
 		PlayerTeam team = info.getTeam();
+		String name = info.getProfile().name();
 		if (team != null) {
-			return strip(team.getPlayerPrefix().getString() + name + team.getPlayerSuffix().getString());
+			addClean(variants, team.getPlayerPrefix().getString() + team.getPlayerSuffix().getString());
+			addClean(variants, team.getPlayerPrefix().getString() + name + team.getPlayerSuffix().getString());
+		} else {
+			addClean(variants, name);
 		}
-		return strip(name);
+		return variants;
 	}
 
-	static String strip(String text) {
+	private static void addClean(List<String> out, String raw) {
+		String cleaned = clean(raw);
+		if (!cleaned.isBlank()) {
+			out.add(cleaned);
+		}
+	}
+
+	static String clean(String text) {
 		if (text == null) {
 			return "";
 		}
 		String stripped = ChatFormatting.stripFormatting(text);
-		return stripped == null ? text.trim() : stripped.trim();
+		if (stripped == null) {
+			stripped = text;
+		}
+		stripped = stripped
+				.replace('\u00A0', ' ')
+				.replace('\u202F', ' ')
+				.replace('\u2007', ' ')
+				.replace('\u200B', ' ')
+				.replaceAll("![A-Za-z0-9._-]{1,24}", " ")
+				.replaceAll("\\s+", " ")
+				.trim();
+		return stripped;
 	}
 }

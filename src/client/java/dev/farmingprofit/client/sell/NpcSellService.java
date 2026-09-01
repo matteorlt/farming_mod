@@ -24,7 +24,6 @@ import net.minecraft.world.item.ItemStack;
  * Répète le cycle N fois ; stop après 3 tours d'affilée sans vente.
  */
 public final class NpcSellService {
-	private static final int TICK_MS = 50;
 	private static final int CLICK_DELAY_TICKS = 2;
 	private static final int WAIT_AFTER_GFS_TICKS = 20;
 	private static final int WAIT_BETWEEN_ROUNDS_TICKS = 10;
@@ -85,6 +84,7 @@ public final class NpcSellService {
 		emptyRounds = 0;
 		soldCount = 0;
 		soldThisRound = 0;
+		chat("Vente de « " + rawQuery + " » (" + repeatCount + " tour(s))…", ChatFormatting.YELLOW);
 		beginRound(client, player, true);
 		FarmingProfitMod.LOGGER.info("NPC sell start item={} repeats={}", targetId, repeatCount);
 	}
@@ -94,7 +94,7 @@ public final class NpcSellService {
 			chat("Aucune vente en cours.", ChatFormatting.GRAY);
 			return;
 		}
-		chat("Vente annulée (" + soldCount + " slot(s), tour " + currentRound + "/" + repeatCount + ").", ChatFormatting.RED);
+		chat("Vente annulée. Total : " + soldCount + " slot(s).", ChatFormatting.RED);
 		reset();
 	}
 
@@ -115,7 +115,6 @@ public final class NpcSellService {
 				if (ticksInPhase >= WAIT_AFTER_GFS_TICKS) {
 					phase = Phase.OPEN_MENU;
 					ticksInPhase = 0;
-					chat("Ouverture du shop NPC → /boostercookiemenu", ChatFormatting.YELLOW);
 					player.connection.sendCommand("boostercookiemenu");
 				}
 			}
@@ -123,21 +122,18 @@ public final class NpcSellService {
 				if (ticksInPhase >= 2) {
 					phase = Phase.WAIT_MENU;
 					ticksInPhase = 0;
-					chat("En attente du menu cookie...", ChatFormatting.GRAY);
 				}
 			}
 			case WAIT_MENU -> {
 				if (isNpcMenuOpen(client)) {
-					collectSlots(player, true);
+					collectSlots(player);
 					if (slotsToClick.isEmpty()) {
-						chat("Tour " + currentRound + "/" + repeatCount + " : rien à vendre dans l'inventaire.", ChatFormatting.RED);
 						finishRound(client, 0);
 						return;
 					}
 					phase = Phase.SELLING;
 					ticksInPhase = 0;
-					chat("Tour " + currentRound + "/" + repeatCount + " : " + slotsToClick.size()
-							+ " slot(s) (middle-click, " + (CLICK_DELAY_TICKS * TICK_MS) + " ms).", ChatFormatting.GOLD);
+					FarmingProfitMod.LOGGER.debug("NPC sell round {}/{} slots={}", currentRound, repeatCount, slotsToClick.size());
 				} else if (ticksInPhase >= WAIT_MENU_TIMEOUT_TICKS) {
 					chat("Le menu cookie ne s'est pas ouvert. Cookie actif ? Vente annulée.", ChatFormatting.RED);
 					reset();
@@ -175,11 +171,7 @@ public final class NpcSellService {
 			client.setScreen(null);
 		}
 		phase = Phase.WAIT_GFS;
-		if (first) {
-			chat("Sack → /gfs " + gfsName + " 9999  (" + currentRound + "/" + repeatCount + ")", ChatFormatting.YELLOW);
-		} else {
-			chat("Tour suivant " + currentRound + "/" + repeatCount + " → /gfs " + gfsName + " 9999", ChatFormatting.YELLOW);
-		}
+		FarmingProfitMod.LOGGER.debug("NPC sell /gfs {} round {}/{} first={}", gfsName, currentRound, repeatCount, first);
 		player.connection.sendCommand("gfs " + gfsName + " 9999");
 	}
 
@@ -192,58 +184,50 @@ public final class NpcSellService {
 		int slotId = slotsToClick.get(nextSlotIndex++);
 		AbstractContainerMenu menu = player.containerMenu;
 		if (!menu.isValidSlotIndex(slotId)) {
-			chat("Slot " + slotId + " invalide, ignoré.", ChatFormatting.RED);
 			return;
 		}
 
 		Slot slot = menu.getSlot(slotId);
 		ItemStack stack = slot.getItem();
 		if (stack.isEmpty() || !matches(stack, targetId)) {
-			chat("Slot " + slotId + " n'est plus « " + rawQuery + " », ignoré.", ChatFormatting.GRAY);
 			return;
 		}
 
-		String name = ChatFormatting.stripFormatting(stack.getHoverName().getString());
-		int count = stack.getCount();
 		client.gameMode.handleContainerInput(menu.containerId, slotId, 2, ContainerInput.CLONE, player);
 		soldCount++;
 		soldThisRound++;
-		chat("Middle-click slot " + slotId + " → " + name + " x" + count, ChatFormatting.AQUA);
 	}
 
 	private void recheckRemaining(Minecraft client, LocalPlayer player) {
-		collectSlots(player, false);
+		collectSlots(player);
 		if (slotsToClick.isEmpty()) {
 			finishRound(client, soldThisRound);
 			return;
 		}
 		recheckCount++;
 		if (recheckCount > MAX_RECHECKS) {
-			chat("Encore " + slotsToClick.size() + " slot(s) après " + MAX_RECHECKS + " rechecks, on passe au tour suivant.", ChatFormatting.RED);
+			FarmingProfitMod.LOGGER.debug("NPC sell leftover slots={} after rechecks", slotsToClick.size());
 			finishRound(client, soldThisRound);
 			return;
 		}
 		nextSlotIndex = 0;
 		ticksInPhase = 0;
-		chat("Recheck : encore " + slotsToClick.size() + " slot(s) de « " + rawQuery + " ».", ChatFormatting.YELLOW);
 	}
 
 	private void finishRound(Minecraft client, int soldInRound) {
 		if (soldInRound == 0) {
 			emptyRounds++;
-			chat("Tour " + currentRound + "/" + repeatCount + " : 0 vente (" + emptyRounds + "/" + MAX_EMPTY_ROUNDS + " vides d'affilée).", ChatFormatting.RED);
 		} else {
 			emptyRounds = 0;
-			chat("Tour " + currentRound + "/" + repeatCount + " : " + soldInRound + " slot(s) vendu(s).", ChatFormatting.GREEN);
 		}
 
 		if (emptyRounds >= MAX_EMPTY_ROUNDS) {
-			chat("Stop : 3 tours d'affilée sans rien vendre. Total : " + soldCount + " slot(s).", ChatFormatting.RED);
+			chat("Vente stoppée : plus rien à vendre. Total : " + soldCount + " slot(s).", ChatFormatting.YELLOW);
 			reset();
 			return;
 		}
 		if (currentRound >= repeatCount) {
-			chat("Terminé : " + soldCount + " slot(s) au total, " + currentRound + " tour(s).", ChatFormatting.GREEN);
+			chat("Vente terminée : " + soldCount + " slot(s).", ChatFormatting.GREEN);
 			reset();
 			return;
 		}
@@ -254,10 +238,9 @@ public final class NpcSellService {
 		}
 		phase = Phase.BETWEEN_ROUNDS;
 		ticksInPhase = 0;
-		chat("Pause avant le tour " + currentRound + "/" + repeatCount + "...", ChatFormatting.GRAY);
 	}
 
-	private void collectSlots(LocalPlayer player, boolean logTargets) {
+	private void collectSlots(LocalPlayer player) {
 		slotsToClick.clear();
 		AbstractContainerMenu menu = player.containerMenu;
 		Inventory inventory = player.getInventory();
@@ -271,10 +254,6 @@ public final class NpcSellService {
 				continue;
 			}
 			slotsToClick.add(i);
-			if (logTargets) {
-				String name = ChatFormatting.stripFormatting(stack.getHoverName().getString());
-				chat("Cible slot " + i + " : " + name + " x" + stack.getCount(), ChatFormatting.GRAY);
-			}
 		}
 	}
 

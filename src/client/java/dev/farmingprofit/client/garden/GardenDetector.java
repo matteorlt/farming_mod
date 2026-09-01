@@ -18,6 +18,7 @@ public final class GardenDetector {
 	private static boolean onHypixel;
 	private static boolean onSkyblock;
 	private static boolean inGarden;
+	private static int gardenMissTicks;
 
 	private GardenDetector() {
 	}
@@ -32,14 +33,17 @@ public final class GardenDetector {
 
 	public static void tick(Minecraft client) {
 		onHypixel = isConnectedToHypixel(client);
-		onSkyblock = false;
-		inGarden = false;
 
 		if (client.level == null || client.player == null) {
+			onSkyblock = false;
+			inGarden = false;
+			gardenMissTicks = 0;
 			return;
 		}
 
 		if (!onHypixel && !client.hasSingleplayerServer()) {
+			onSkyblock = false;
+			inGarden = false;
 			return;
 		}
 
@@ -48,13 +52,25 @@ public final class GardenDetector {
 		String text = sidebar.toString();
 
 		onSkyblock = text.toUpperCase().contains("SKYBLOCK") || text.contains("Purse:") || text.contains("Piggy:");
-		inGarden = onSkyblock && (containsGarden(text));
+		boolean detectedGarden = onSkyblock && containsGarden(text);
+		if (detectedGarden) {
+			gardenMissTicks = 0;
+			inGarden = true;
+		} else if (inGarden) {
+			gardenMissTicks++;
+			if (gardenMissTicks > 60) {
+				inGarden = false;
+			}
+		} else {
+			inGarden = false;
+		}
 	}
 
 	public static void reset() {
 		onHypixel = false;
 		onSkyblock = false;
 		inGarden = false;
+		gardenMissTicks = 0;
 	}
 
 	private static boolean containsGarden(String text) {
@@ -62,7 +78,8 @@ public final class GardenDetector {
 		if (stripped == null) {
 			stripped = text;
 		}
-		return stripped.contains("The Garden") || stripped.contains("Garden");
+		return stripped.contains("The Garden") || stripped.contains("Garden")
+				|| stripped.contains("Plot -") || stripped.contains("Plot —");
 	}
 
 	private static boolean isConnectedToHypixel(Minecraft client) {

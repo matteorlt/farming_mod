@@ -64,8 +64,7 @@ public class FarmingProfitClient implements ClientModInitializer {
 				FarmingProfitMod.id("pest_mode"),
 				(graphics, delta) -> PestModeHud.render(graphics, delta, config, pestLoadout)
 		);
-		HudElementRegistry.attachElementBefore(
-				VanillaHudElements.CHAT,
+		HudElementRegistry.addLast(
 				FarmingProfitMod.id("pest_cooldown_alert"),
 				(graphics, delta) -> PestCooldownAlertHud.render(graphics, delta, config, pestCooldown)
 		);

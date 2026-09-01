@@ -109,18 +109,25 @@ public final class UpdateInstaller {
 
 	private static void launchWindows(Path pending, Path dest, List<Path> oldJars) throws IOException {
 		Path script = modsDir().resolve("farmingprofit-install.bat");
+		Path launcher = modsDir().resolve("farmingprofit-install.vbs");
 		StringBuilder bat = new StringBuilder();
 		bat.append("@echo off\r\n");
 		bat.append("ping 127.0.0.1 -n 6 > NUL\r\n");
 		for (Path old : oldJars) {
-			bat.append("del /f /q ").append(winQuote(old)).append("\r\n");
+			bat.append("del /f /q ").append(winQuote(old)).append(" > NUL 2>&1\r\n");
 		}
-		bat.append("move /y ").append(winQuote(pending)).append(" ").append(winQuote(dest)).append("\r\n");
-		bat.append("del /f /q ").append(winQuote(script)).append("\r\n");
+		bat.append("move /y ").append(winQuote(pending)).append(" ").append(winQuote(dest)).append(" > NUL 2>&1\r\n");
+		bat.append("del /f /q ").append(winQuote(launcher)).append(" > NUL 2>&1\r\n");
+		bat.append("del /f /q ").append(winQuote(script)).append(" > NUL 2>&1\r\n");
+		bat.append("exit\r\n");
 		Files.writeString(script, bat.toString(), StandardCharsets.UTF_8);
 
-		new ProcessBuilder("cmd.exe", "/c",
-				"start \"fp-upd\" /min \"" + script.toAbsolutePath().normalize() + "\"")
+		String batPath = script.toAbsolutePath().normalize().toString().replace("\"", "\"\"");
+		String vbs = "Set sh = CreateObject(\"Wscript.Shell\")\r\n"
+				+ "sh.Run \"cmd.exe /c \"\"" + batPath + "\"\"\", 0, False\r\n";
+		Files.writeString(launcher, vbs, StandardCharsets.UTF_8);
+
+		new ProcessBuilder("wscript.exe", "//B", "//nologo", launcher.toAbsolutePath().toString())
 				.directory(modsDir().toFile())
 				.redirectOutput(ProcessBuilder.Redirect.DISCARD)
 				.redirectError(ProcessBuilder.Redirect.DISCARD)
