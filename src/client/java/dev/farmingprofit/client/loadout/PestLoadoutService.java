@@ -50,7 +50,7 @@ public final class PestLoadoutService {
 	private Boolean queuedToPest;
 	private boolean expectFarmAfterSpawn;
 	private long farmSwitchAtMs;
-	private int attackPulseTicks;
+	private int resumeAttackTicks;
 
 	public PestLoadoutService(ModConfig config) {
 		this.config = config;
@@ -80,7 +80,7 @@ public final class PestLoadoutService {
 		queuedToPest = null;
 		expectFarmAfterSpawn = false;
 		farmSwitchAtMs = 0;
-		stopAttackPulse(Minecraft.getInstance());
+		resumeAttackTicks = 0;
 	}
 
 	public void cancelPendingAuto() {
@@ -90,7 +90,7 @@ public final class PestLoadoutService {
 	}
 
 	public void onPestAlert() {
-		if (!config.autoPestLoadout) {
+		if (!config.autoPestLoadout || !GardenDetector.inGarden()) {
 			return;
 		}
 		expectFarmAfterSpawn = true;
@@ -119,6 +119,9 @@ public final class PestLoadoutService {
 	}
 
 	public void requestSwitch(boolean toPest) {
+		if (!GardenDetector.inGarden()) {
+			return;
+		}
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client.player;
 		if (player == null) {
@@ -156,16 +159,26 @@ public final class PestLoadoutService {
 				reset();
 			}
 			wasUseDown = false;
-			stopAttackPulse(client);
+			resumeAttackTicks = 0;
 			return;
 		}
 
-		tickAttackPulse(client);
+		if (!GardenDetector.inGarden()) {
+			if (running() && quiet) {
+				cancel();
+			}
+			cancelPendingAuto();
+			resumeAttackTicks = 0;
+		}
+
+		tickResumeAttack(client);
 
 		if (config.autoPestLoadout && farmSwitchAtMs > 0 && System.currentTimeMillis() >= farmSwitchAtMs) {
 			farmSwitchAtMs = 0;
 			expectFarmAfterSpawn = false;
-			requestSwitch(false);
+			if (GardenDetector.inGarden()) {
+				requestSwitch(false);
+			}
 		}
 
 		boolean useDown = client.options.keyUse.isDown();
@@ -239,12 +252,12 @@ public final class PestLoadoutService {
 					}
 					Boolean next = queuedToPest;
 					queuedToPest = null;
-					boolean pulseAttack = isPestName(pendingTarget) && next == null;
+					boolean resumeAttack = next == null;
 					reset();
 					if (next != null) {
 						requestSwitch(next);
-					} else if (pulseAttack) {
-						startAttackPulse(client);
+					} else if (resumeAttack) {
+						scheduleResumeAttack();
 					}
 				}
 			}
@@ -261,6 +274,7 @@ public final class PestLoadoutService {
 		lastTriggerMs = now;
 		pendingTarget = toPest ? pestName() : farmName();
 		ticksInPhase = 0;
+		resumeAttackTicks = 0;
 		phase = Phase.OPEN_MENU;
 		if (client.screen != null) {
 			client.setScreen(null);
@@ -382,32 +396,30 @@ public final class PestLoadoutService {
 		return stripped == null ? "" : stripped.trim();
 	}
 
-	private void startAttackPulse(Minecraft client) {
+	private void scheduleResumeAttack() {
+		resumeAttackTicks = 3;
+	}
+
+	/**
+	 * Un clic (toggle Attack/Destroy vanilla) après le GUI loadout.
+	 * Le menu remet {@code missTime} à 10000 et relâche le toggle souris, qui n’est pas restauré.
+	 */
+	private void tickResumeAttack(Minecraft client) {
+		if (resumeAttackTicks <= 0 || running()) {
+			return;
+		}
+		if (client.screen != null || !client.mouseHandler.isMouseGrabbed()) {
+			return;
+		}
+		resumeAttackTicks--;
+		if (resumeAttackTicks > 0) {
+			return;
+		}
 		if (client.options.keyAttack.isDown()) {
 			return;
 		}
+		client.missTime = 0;
 		client.options.keyAttack.setDown(true);
-		attackPulseTicks = 1;
-	}
-
-	private void tickAttackPulse(Minecraft client) {
-		if (attackPulseTicks <= 0) {
-			return;
-		}
-		attackPulseTicks--;
-		if (attackPulseTicks <= 0) {
-			client.options.keyAttack.setDown(false);
-		}
-	}
-
-	private void stopAttackPulse(Minecraft client) {
-		if (attackPulseTicks <= 0) {
-			return;
-		}
-		attackPulseTicks = 0;
-		if (client.options != null) {
-			client.options.keyAttack.setDown(false);
-		}
 	}
 
 	private void reset() {
