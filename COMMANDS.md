@@ -67,6 +67,7 @@ Clic droit avec une **canne à pêche** :
 | `/fprofit pest` | Toggle Pest / Farm (comme la canne) |
 | `/fprofit pestalert` | Active ou désactive l’alerte cooldown pest (tab) |
 | `/fprofit pestauto` | Auto loadout Pest à 2m50, Farm 2s après le spawn |
+| `/fprofit serverpack` | Masque le pack serveur Hypixel (accepté, pas les textures) |
 
 Noms dans `farmingprofit.json` : `pestLoadoutName` (défaut `Pest`), `farmLoadoutName` (défaut `Farm`).
 
@@ -87,6 +88,14 @@ Réglages dans `farmingprofit.json` : `pestCooldownAlertAtSeconds` (défaut `170
 | Commande | Description |
 | --- | --- |
 | `/fprofit pestauto` | Active ou désactive le switch auto (défaut : ON) |
+
+## Pack serveur Hypixel
+
+Hypixel force le pack **World Specific Resources Hypixel Skyblock**. Le mod l’accepte (obligatoire pour jouer) mais **n’applique pas les textures**.
+
+| Commande | Description |
+| --- | --- |
+| `/fprofit serverpack` | Active ou désactive le masquage (défaut : ON) |
 
 ## Vente NPC (sacks + cookie menu)
 

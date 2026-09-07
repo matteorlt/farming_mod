@@ -31,6 +31,10 @@ public final class GardenDetector {
 		return onSkyblock;
 	}
 
+	public static boolean onHypixel() {
+		return onHypixel || isConnectedToHypixel(Minecraft.getInstance());
+	}
+
 	public static void tick(Minecraft client) {
 		onHypixel = isConnectedToHypixel(client);
 

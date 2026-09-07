@@ -39,6 +39,8 @@ public final class ModConfig {
 	public int pestCooldownAlertCountdown = 5;
 	/** À 2m50 → loadout Pest, 2s après le spawn → loadout Farm. */
 	public boolean autoPestLoadout = true;
+	/** Accepte le pack serveur Hypixel sans l’appliquer (textures vanilla). */
+	public boolean hideServerResourcePack = true;
 
 	public static ModConfig load() {
 		if (!Files.exists(PATH)) {

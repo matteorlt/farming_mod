@@ -169,6 +169,18 @@ public class FarmingProfitClient implements ClientModInitializer {
 									: "Auto loadout : OFF.");
 							return 1;
 						}))
+						.then(literal("serverpack").executes(ctx -> {
+							config.hideServerResourcePack = !config.hideServerResourcePack;
+							config.save();
+							Minecraft client = ctx.getSource().getClient();
+							if (config.hideServerResourcePack) {
+								client.getDownloadedPackSource().popAll();
+								feedback(ctx, "Pack serveur Hypixel : masqué (accepté, textures vanilla).");
+							} else {
+								feedback(ctx, "Pack serveur Hypixel : visible. Reconnecte pour le recharger.");
+							}
+							return 1;
+						}))
 						.then(literal("update")
 								.executes(ctx -> {
 									if (!config.checkUpdates) {
@@ -244,7 +256,7 @@ public class FarmingProfitClient implements ClientModInitializer {
 	}
 
 	private static int help(CommandContext<FabricClientCommandSource> ctx) {
-		ctx.getSource().sendFeedback(Component.literal("Farming Profit — /fprofit sell <item> [fois] | pest | pestauto | pestalert | update [install] | sell cancel | move [x y|reset] | reset | toggle | hitbox | prices | mode <OFFER|INSTANT>").withStyle(ChatFormatting.GOLD));
+		ctx.getSource().sendFeedback(Component.literal("Farming Profit — /fprofit sell <item> [fois] | pest | pestauto | pestalert | serverpack | update [install] | sell cancel | move [x y|reset] | reset | toggle | hitbox | prices | mode <OFFER|INSTANT>").withStyle(ChatFormatting.GOLD));
 		return 1;
 	}
 
