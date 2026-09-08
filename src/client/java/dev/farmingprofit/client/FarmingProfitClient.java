@@ -174,10 +174,10 @@ public class FarmingProfitClient implements ClientModInitializer {
 							config.save();
 							Minecraft client = ctx.getSource().getClient();
 							if (config.hideServerResourcePack) {
-								client.getDownloadedPackSource().popAll();
-								feedback(ctx, "Pack serveur Hypixel : masqué (accepté, textures vanilla).");
+								client.reloadResourcePacks();
+								feedback(ctx, "Pack serveur Hypixel : priorité basse (tes packs passent devant).");
 							} else {
-								feedback(ctx, "Pack serveur Hypixel : visible. Reconnecte pour le recharger.");
+								feedback(ctx, "Pack serveur Hypixel : priorité normale. Reconnecte pour le remettre en haut.");
 							}
 							return 1;
 						}))

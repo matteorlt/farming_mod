@@ -7,7 +7,8 @@
 		"CropHitboxMixin",
 		"AbstractContainerScreenMixin",
 		"DownloadedPackSourceMixin",
-		"ClientCommonPacketListenerImplMixin"
+		"ClientCommonPacketListenerImplMixin",
+		"PackRepositoryMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

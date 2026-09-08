@@ -1,5 +1,7 @@
 package dev.farmingprofit.client.pack;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 import dev.farmingprofit.client.FarmingProfitClient;
@@ -7,9 +9,11 @@ import dev.farmingprofit.client.config.ModConfig;
 import dev.farmingprofit.client.garden.GardenDetector;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.common.ClientboundResourcePackPushPacket;
+import net.minecraft.server.packs.repository.Pack;
+import net.minecraft.server.packs.repository.PackSource;
 
 /**
- * Accepte le pack serveur Hypixel (obligatoire pour jouer) sans charger ses textures.
+ * Garde le pack serveur Hypixel (textures d’items SkyBlock) en priorité la plus basse.
  */
 public final class ServerPackHider {
 	private ServerPackHider() {
@@ -42,5 +46,34 @@ public final class ServerPackHider {
 			}
 		}
 		return GardenDetector.onHypixel();
+	}
+
+	/**
+	 * Place les packs serveur juste après vanilla, pour que les packs perso les surchargent.
+	 */
+	public static List<Pack> withServerPacksLowest(List<Pack> selected) {
+		List<Pack> serverPacks = new ArrayList<>();
+		List<Pack> others = new ArrayList<>();
+		for (Pack pack : selected) {
+			if (pack.getPackSource() == PackSource.SERVER) {
+				serverPacks.add(pack);
+			} else {
+				others.add(pack);
+			}
+		}
+		if (serverPacks.isEmpty()) {
+			return null;
+		}
+		int index = 0;
+		while (index < others.size() && isBasePack(others.get(index))) {
+			index++;
+		}
+		others.addAll(index, serverPacks);
+		return List.copyOf(others);
+	}
+
+	private static boolean isBasePack(Pack pack) {
+		PackSource source = pack.getPackSource();
+		return source == PackSource.BUILT_IN || source == PackSource.FEATURE;
 	}
 }
