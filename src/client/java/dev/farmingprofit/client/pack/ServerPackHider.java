@@ -49,7 +49,8 @@ public final class ServerPackHider {
 	}
 
 	/**
-	 * Place les packs serveur juste après vanilla, pour que les packs perso les surchargent.
+	 * Place les packs serveur tout en bas : vanilla et packs perso passent devant,
+	 * les textures d’items SkyBlock restent en fallback.
 	 */
 	public static List<Pack> withServerPacksLowest(List<Pack> selected) {
 		List<Pack> serverPacks = new ArrayList<>();
@@ -64,16 +65,7 @@ public final class ServerPackHider {
 		if (serverPacks.isEmpty()) {
 			return null;
 		}
-		int index = 0;
-		while (index < others.size() && isBasePack(others.get(index))) {
-			index++;
-		}
-		others.addAll(index, serverPacks);
+		others.addAll(0, serverPacks);
 		return List.copyOf(others);
-	}
-
-	private static boolean isBasePack(Pack pack) {
-		PackSource source = pack.getPackSource();
-		return source == PackSource.BUILT_IN || source == PackSource.FEATURE;
 	}
 }

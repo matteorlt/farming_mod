@@ -91,7 +91,7 @@ Réglages dans `farmingprofit.json` : `pestCooldownAlertAtSeconds` (défaut `170
 
 ## Pack serveur Hypixel
 
-Hypixel force le pack **World Specific Resources Hypixel Skyblock**. Le mod l’accepte (obligatoire pour jouer) et le laisse chargé pour les textures d’items, mais le place **en dernier** (priorité la plus basse) pour que tes packs perso passent devant.
+Hypixel force le pack **World Specific Resources Hypixel Skyblock**. Le mod l’accepte (obligatoire pour jouer) et le laisse chargé pour les textures d’items SkyBlock, mais le place **tout en dernier** : le pack vanilla Minecraft et tes packs perso passent devant.
 
 | Commande | Description |
 | --- | --- |
